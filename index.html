@@ -237,7 +237,7 @@
                         
                         deskElement.classList.add(...colorClasses.split(' '));
                         // MODIFIÉ : Ajout de l'émoji
-                        deskElement.innerHTML = `<span class="text-2xl">${emoji}</span><span class="font-bold text-base mt-1">${employee.name}</span>`;
+                        deskElement.innerHTML = `<span class="font-bold text-base mt-1">${emoji} ${employee.name}</span>`;
                         
                     } else {
                         deskElement.classList.add('bg-white', 'text-slate-400', 'border-2', 'border-dashed', 'border-slate-300');
