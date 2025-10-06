@@ -111,12 +111,18 @@
         const googleSheetEditUrl = 'https://docs.google.com/spreadsheets/d/1frF7xYxU_f4jusfg0NeJE81o74m20f-QwypUGXd6NHk/edit';
 
         // --- PLAN DU BUREAU ---
+        // MODIFIÉ : Ajout d'un marqueur 'corridor' pour les lignes de séparation
         const officeGrid = [
-            ['A1', 'A2', 'A3'], ['B1', 'B2', 'B3'], [null, null, null],
-            ['C1', 'C2', 'C3'], ['D1', 'D2', 'D3'], [null, null, null],
-            ['E1', 'E2', 'E3'], ['F1', 'F2', 'F3'], [null, null, null],
-            ['G1', 'G2', 'G3'], ['H1', 'H2', 'H3'], [null, null, null],
-            ['I1', 'I2', 'I3'], ['J1', 'J2', 'J3'], [null, null, null],
+            ['A1', 'A2', 'A3'], ['B1', 'B2', 'B3'],
+            ['corridor'],
+            ['C1', 'C2', 'C3'], ['D1', 'D2', 'D3'],
+            ['corridor'],
+            ['E1', 'E2', 'E3'], ['F1', 'F2', 'F3'],
+            ['corridor'],
+            ['G1', 'G2', 'G3'], ['H1', 'H2', 'H3'],
+            ['corridor'],
+            ['I1', 'I2', 'I3'], ['J1', 'J2', 'J3'],
+            ['corridor'],
             ['K1', 'K2', 'K3'], ['L1', 'L2', 'L3']
         ];
 
@@ -209,41 +215,65 @@
             }
         }
 
+        // MODIFIÉ : La fonction est réécrite pour gérer les couloirs
         function updatePlan(selectedDate) {
             seatingPlan.innerHTML = '';
-            const maxColumns = officeGrid.reduce((max, row) => Math.max(max, row.length), 0);
+            // Détermine le nombre maximum de colonnes à partir des rangées de bureaux uniquement
+            const maxColumns = officeGrid.reduce((max, row) => {
+                return (row.length > 1) ? Math.max(max, row.length) : max;
+            }, 0);
+
             if (maxColumns === 0) return;
             seatingPlan.style.gridTemplateColumns = `repeat(${maxColumns}, minmax(0, 1fr))`;
 
-            officeGrid.flat().forEach(seatId => {
-                if (seatId === null) {
-                    const spacer = document.createElement('div');
-                    spacer.style.visibility = 'hidden';
-                    seatingPlan.appendChild(spacer);
+            officeGrid.forEach(row => {
+                // Vérifie si la rangée actuelle est un marqueur de couloir
+                if (row.length === 1 && row[0] === 'corridor') {
+                    const corridorElement = document.createElement('div');
+                    // Fait en sorte que l'élément s'étende sur toutes les colonnes de la grille
+                    corridorElement.style.gridColumn = '1 / -1';
+                    // Style de la ligne de couloir
+                    corridorElement.className = 'h-3 bg-slate-200 rounded-full my-1';
+                    seatingPlan.appendChild(corridorElement);
                 } else {
-                    const employee = employeeData.find(e => e.seat === seatId);
-                    const deskElement = document.createElement('div');
-                    deskElement.classList.add('desk', 'p-2', 'rounded-lg', 'shadow-md');
+                    // C'est une rangée de bureaux normale
+                    row.forEach(seatId => {
+                        if (seatId === null) {
+                            const spacer = document.createElement('div');
+                            spacer.style.visibility = 'hidden';
+                            seatingPlan.appendChild(spacer);
+                        } else {
+                            const employee = employeeData.find(e => e.seat === seatId);
+                            const deskElement = document.createElement('div');
+                            deskElement.classList.add('desk', 'p-2', 'rounded-lg', 'shadow-md');
 
-                    if (employee) {
-                        const status = employee.presences[selectedDate];
-                        let colorClasses = 'bg-slate-300 text-slate-600 border-2 border-slate-400'; // Absent
-                        let emoji = '🪑'; // Emoji pour absent
-                        
-                        if (status === 'bureau' || status === 'présent') {
-                            colorClasses = 'bg-emerald-400 text-emerald-900 border-2 border-emerald-500'; // Présent
-                            emoji = '🧑‍💻'; // Emoji pour présent
+                            if (employee) {
+                                const status = employee.presences[selectedDate];
+                                let colorClasses = 'bg-slate-300 text-slate-600 border-2 border-slate-400'; // Absent
+                                let emoji = '🪑'; // Emoji pour absent
+                                
+                                if (status === 'bureau' || status === 'présent') {
+                                    colorClasses = 'bg-emerald-400 text-emerald-900 border-2 border-emerald-500'; // Présent
+                                    emoji = '🧑‍💻'; // Emoji pour présent
+                                }
+                                
+                                deskElement.classList.add(...colorClasses.split(' '));
+                                deskElement.innerHTML = `<span class="font-bold text-base mt-1">${emoji} ${employee.name}</span>`;
+                                
+                            } else {
+                                deskElement.classList.add('bg-white', 'text-slate-400', 'border-2', 'border-dashed', 'border-slate-300');
+                                deskElement.innerHTML = `<span class="font-medium">${seatId}</span><span class="text-sm mt-1">Libre</span>`;
+                            }
+                            seatingPlan.appendChild(deskElement);
                         }
-                        
-                        deskElement.classList.add(...colorClasses.split(' '));
-                        // MODIFIÉ : Ajout de l'émoji
-                        deskElement.innerHTML = `<span class="font-bold text-base mt-1">${emoji} ${employee.name}</span>`;
-                        
-                    } else {
-                        deskElement.classList.add('bg-white', 'text-slate-400', 'border-2', 'border-dashed', 'border-slate-300');
-                        deskElement.innerHTML = `<span class="font-medium">${seatId}</span><span class="text-sm mt-1">Libre</span>`;
+                    });
+
+                    // Cette partie est importante pour garder la grille alignée si certaines rangées sont plus courtes
+                    for (let i = row.length; i < maxColumns; i++) {
+                        const spacer = document.createElement('div');
+                        spacer.style.visibility = 'hidden';
+                        seatingPlan.appendChild(spacer);
                     }
-                    seatingPlan.appendChild(deskElement);
                 }
             });
         }
