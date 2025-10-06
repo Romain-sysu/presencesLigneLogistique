@@ -50,8 +50,8 @@
             <h1 class="text-3xl sm:text-4xl font-bold text-slate-800">Plan de Présence au Bureau de la ligne Logistique</h1>
             <p class="mt-2 text-lg text-slate-600">Sélectionnez une date pour voir qui est présent.</p>
             <p class="text-sm text-slate-500 mt-2">Note : Les modifications apportées au Google Sheet peuvent prendre jusqu'à 5 minutes pour apparaître.</p>
-            <p id="last-refresh-time" class="text-sm text-slate-500 mt-1"></p>
-            <p id="g1-update-date" class="text-sm text-slate-500 mt-1"></p>
+            <!-- <p id="last-refresh-time" class="text-sm text-slate-500 mt-1"></p> -->
+            <!-- <p id="g1-update-date" class="text-sm text-slate-500 mt-1"></p> -->
             
         </header>
 
@@ -91,7 +91,7 @@
         </main>
     </div>
 
-    <!-- Structure de la popup (modal) -->
+    <!-- Structure de la popup (modal) - Désactivée
     <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
         <div id="modal-content" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
             <h3 class="text-lg font-bold text-slate-800" id="modal-title">Modifier la présence</h3>
@@ -103,6 +103,7 @@
             </div>
         </div>
     </div>
+    -->
 
     <script>
         // --- CONFIGURATION ---
@@ -127,27 +128,31 @@
         const seatingPlan = document.getElementById('seating-plan');
         const loaderContainer = document.getElementById('loader-container');
         const refreshButton = document.getElementById('refresh-button');
-        const lastRefreshTimeElement = document.getElementById('last-refresh-time');
-        const g1UpdateDateElement = document.getElementById('g1-update-date');
+        // const lastRefreshTimeElement = document.getElementById('last-refresh-time'); // Masqué
+        // const g1UpdateDateElement = document.getElementById('g1-update-date'); // Masqué
         const prevDayButton = document.getElementById('prev-day-button');
         const nextDayButton = document.getElementById('next-day-button');
+        const originalRefreshButtonContent = refreshButton.innerHTML;
+
+        /* Code de la popup désactivé
         const modal = document.getElementById('edit-modal');
         const modalContent = document.getElementById('modal-content');
         const modalText = document.getElementById('modal-text');
         const modalEditLink = document.getElementById('modal-edit-link');
         const modalCloseButton = document.getElementById('modal-close-button');
-        const originalRefreshButtonContent = refreshButton.innerHTML;
+        */
 
         // --- FONCTIONS ---
+        /*
         function updateLastRefreshDisplay() {
             const now = new Date();
             const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-            lastRefreshTimeElement.textContent = `Dernière actualisation : ${now.toLocaleDateString('fr-FR', options)}`;
+            if (lastRefreshTimeElement) lastRefreshTimeElement.textContent = `Dernière actualisation : ${now.toLocaleDateString('fr-FR', options)}`;
         }
         
         function updateG1DateDisplay() {
             if (!g1UpdateDate) {
-                g1UpdateDateElement.textContent = '';
+                if(g1UpdateDateElement) g1UpdateDateElement.textContent = '';
                 return;
             }
             const parts = g1UpdateDate.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{1,2}))?/);
@@ -160,8 +165,9 @@
                     formattedDate = dateObj.toLocaleDateString('fr-FR', options);
                 }
             }
-            g1UpdateDateElement.textContent = `Date de traitement MAJ : ${formattedDate}`;
+            if (g1UpdateDateElement) g1UpdateDateElement.textContent = `Date de traitement MAJ : ${formattedDate}`;
         }
+        */
         
         async function fetchAndProcessData() {
             try {
@@ -227,8 +233,9 @@
                         }
                         deskElement.classList.add(...colorClasses.split(' '));
                         deskElement.innerHTML = `<span class="font-bold text-base">${employee.name}</span>`;
-                        deskElement.classList.add('cursor-pointer', 'hover:opacity-80');
-                        deskElement.addEventListener('click', () => openEditModal(employee, selectedDate));
+                        // MODIFIÉ : Le clic ne fait plus rien
+                        // deskElement.classList.add('cursor-pointer', 'hover:opacity-80');
+                        // deskElement.addEventListener('click', () => openEditModal(employee, selectedDate));
                     } else {
                         deskElement.classList.add('bg-white', 'text-slate-400', 'border-2', 'border-dashed', 'border-slate-300');
                         deskElement.innerHTML = `<span class="font-medium">${seatId}</span><span class="text-sm mt-1">Libre</span>`;
@@ -238,6 +245,7 @@
             });
         }
         
+        /* Fonction de la popup désactivée
         function openEditModal(employee, date) {
             const dateObj = new Date(date + 'T12:00:00');
             const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -251,14 +259,15 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
+        */
 
         async function handleRefresh() {
             refreshButton.disabled = true;
             refreshButton.innerHTML = `<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Chargement...`;
             if (await fetchAndProcessData()) {
                 updatePlan(dateFilter.value);
-                updateLastRefreshDisplay();
-                updateG1DateDisplay();
+                // updateLastRefreshDisplay(); // Masqué
+                // updateG1DateDisplay(); // Masqué
             }
             refreshButton.disabled = false;
             refreshButton.innerHTML = `Actualisé ✓`;
@@ -274,7 +283,7 @@
             currentDate.setDate(currentDate.getDate() + days);
             const newDateString = currentDate.toISOString().split('T')[0];
             dateFilter.value = newDateString;
-            localStorage.setItem('selectedDate', newDateString); // MODIFIÉ : Sauvegarde de la date
+            localStorage.setItem('selectedDate', newDateString); 
             updatePlan(newDateString);
         }
 
@@ -284,22 +293,24 @@
         refreshButton.addEventListener('click', handleRefresh);
         dateFilter.addEventListener('change', (event) => {
             updatePlan(event.target.value);
-            localStorage.setItem('selectedDate', event.target.value); // MODIFIÉ : Sauvegarde de la date
+            localStorage.setItem('selectedDate', event.target.value); 
         });
+        
+        /* Événements de la popup désactivés
         modalCloseButton.addEventListener('click', closeModal);
         modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        */
 
         document.addEventListener('DOMContentLoaded', async () => {
             loaderContainer.style.display = 'block';
             seatingPlan.style.display = 'none';
             if (await fetchAndProcessData()) {
-                // MODIFIÉ : Charge la date sauvegardée ou la date du jour
                 const savedDate = localStorage.getItem('selectedDate');
                 const initialDate = savedDate || new Date().toISOString().split('T')[0];
                 dateFilter.value = initialDate;
                 updatePlan(initialDate);
-                updateLastRefreshDisplay();
-                updateG1DateDisplay();
+                // updateLastRefreshDisplay(); // Masqué
+                // updateG1DateDisplay(); // Masqué
             }
             loaderContainer.style.display = 'none';
             seatingPlan.style.display = 'grid';
