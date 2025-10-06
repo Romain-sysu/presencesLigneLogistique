@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualiseur de Présence au Bureau</title>
-    <!-- AJOUTÉ : Icône pour l'onglet du navigateur (favicon) -->
+    <!-- MODIFIÉ : Icône pour l'onglet du navigateur (favicon) -->
     <link rel="icon" href="Gemini_Generated_Image_ek04smek04smek04.png">
     <!-- Utilisation de Tailwind CSS pour un design rapide et moderne -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -52,6 +52,7 @@
             <p class="text-sm text-slate-500 mt-2">Note : Les modifications apportées au Google Sheet peuvent prendre jusqu'à 5 minutes pour apparaître.</p>
             <p id="last-refresh-time" class="text-sm text-slate-500 mt-1"></p>
             <p id="g1-update-date" class="text-sm text-slate-500 mt-1"></p>
+            
         </header>
 
         <!-- Section des contrôles et légende -->
@@ -143,7 +144,7 @@
             const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
             lastRefreshTimeElement.textContent = `Dernière actualisation : ${now.toLocaleDateString('fr-FR', options)}`;
         }
-
+        
         function updateG1DateDisplay() {
             if (!g1UpdateDate) {
                 g1UpdateDateElement.textContent = '';
@@ -161,7 +162,7 @@
             }
             g1UpdateDateElement.textContent = `Date de traitement MAJ : ${formattedDate}`;
         }
-
+        
         async function fetchAndProcessData() {
             try {
                 const urlWithCacheBust = `${googleSheetCsvUrl}&_=${Date.now()}`;
@@ -220,7 +221,6 @@
 
                     if (employee) {
                         const status = employee.presences[selectedDate];
-                        // MODIFIÉ : Logique de couleur simplifiée
                         let colorClasses = 'bg-slate-300 text-slate-600 border-2 border-slate-400'; // Absent
                         if (status === 'bureau' || status === 'présent') {
                             colorClasses = 'bg-emerald-400 text-emerald-900 border-2 border-emerald-500'; // Présent
@@ -274,6 +274,7 @@
             currentDate.setDate(currentDate.getDate() + days);
             const newDateString = currentDate.toISOString().split('T')[0];
             dateFilter.value = newDateString;
+            localStorage.setItem('selectedDate', newDateString); // MODIFIÉ : Sauvegarde de la date
             updatePlan(newDateString);
         }
 
@@ -281,7 +282,10 @@
         prevDayButton.addEventListener('click', () => changeDate(-1));
         nextDayButton.addEventListener('click', () => changeDate(1));
         refreshButton.addEventListener('click', handleRefresh);
-        dateFilter.addEventListener('change', (event) => updatePlan(event.target.value));
+        dateFilter.addEventListener('change', (event) => {
+            updatePlan(event.target.value);
+            localStorage.setItem('selectedDate', event.target.value); // MODIFIÉ : Sauvegarde de la date
+        });
         modalCloseButton.addEventListener('click', closeModal);
         modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
@@ -289,7 +293,9 @@
             loaderContainer.style.display = 'block';
             seatingPlan.style.display = 'none';
             if (await fetchAndProcessData()) {
-                const initialDate = new Date().toISOString().split('T')[0];
+                // MODIFIÉ : Charge la date sauvegardée ou la date du jour
+                const savedDate = localStorage.getItem('selectedDate');
+                const initialDate = savedDate || new Date().toISOString().split('T')[0];
                 dateFilter.value = initialDate;
                 updatePlan(initialDate);
                 updateLastRefreshDisplay();
@@ -302,6 +308,4 @@
     </script>
 </body>
 </html>
-
-
 
