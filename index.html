@@ -78,8 +78,8 @@
 
             <!-- MODIFIÉ : Légende des couleurs simplifiée -->
             <div class="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-sm text-slate-700">
-                <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-emerald-400 mr-2 border border-emerald-500"></span><span>Présent</span></div>
-                <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-slate-300 mr-2 border border-slate-400"></span><span>Non présent</span></div>
+                <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-emerald-400 mr-2 border border-emerald-500"></span><span>Présent 🧑‍💻</span></div>
+                <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-slate-300 mr-2 border border-slate-400"></span><span>Non présent 🪑</span></div>
             </div>
         </div>
 
@@ -228,14 +228,17 @@
                     if (employee) {
                         const status = employee.presences[selectedDate];
                         let colorClasses = 'bg-slate-300 text-slate-600 border-2 border-slate-400'; // Absent
+                        let emoji = '🪑'; // Emoji pour absent
+                        
                         if (status === 'bureau' || status === 'présent') {
                             colorClasses = 'bg-emerald-400 text-emerald-900 border-2 border-emerald-500'; // Présent
+                            emoji = '🧑‍💻'; // Emoji pour présent
                         }
+                        
                         deskElement.classList.add(...colorClasses.split(' '));
-                        deskElement.innerHTML = `<span class="font-bold text-base">${employee.name}</span>`;
-                        // MODIFIÉ : Le clic ne fait plus rien
-                        // deskElement.classList.add('cursor-pointer', 'hover:opacity-80');
-                        // deskElement.addEventListener('click', () => openEditModal(employee, selectedDate));
+                        // MODIFIÉ : Ajout de l'émoji
+                        deskElement.innerHTML = `<span class="text-2xl">${emoji}</span><span class="font-bold text-base mt-1">${employee.name}</span>`;
+                        
                     } else {
                         deskElement.classList.add('bg-white', 'text-slate-400', 'border-2', 'border-dashed', 'border-slate-300');
                         deskElement.innerHTML = `<span class="font-medium">${seatId}</span><span class="text-sm mt-1">Libre</span>`;
