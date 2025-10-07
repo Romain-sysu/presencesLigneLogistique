@@ -17,7 +17,7 @@
         }
         .desk {
             transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, color 0.3s ease-in-out;
-            min-height: 20px;
+            min-height: 16px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -96,7 +96,8 @@
             </div>
         </main>
     </div>
-      <!-- Pied de page avec copyright -->
+
+    <!-- Pied de page avec copyright -->
     <footer class="text-center mt-12 mb-4">
         <p class="text-sm text-slate-500">&copy; <span id="copyright-year"></span> Ligne Logistique. Tous droits réservés.</p>
     </footer>
@@ -207,7 +208,8 @@
                     employeeMap.get(name).seat = seat;
 
                     const date = row[2]?.trim();
-                    const status = row[3]?.trim().toLowerCase();
+                    // CORRIGÉ : On suppose que la colonne "Est present ?" est la 5ème colonne (index 4)
+                    const status = row[4]?.trim().toLowerCase();
                     if (date && status) {
                         const parts = date.split('/');
                         if (parts.length === 3) {
@@ -258,11 +260,12 @@
                             deskElement.classList.add('desk', 'p-2', 'rounded-lg', 'shadow-md');
 
                             if (employee) {
+                                // CORRIGÉ : On récupère le statut pour la date sélectionnée
                                 const status = employee.presences[selectedDate];
                                 let colorClasses = 'bg-slate-300 text-slate-600 border-2 border-slate-400'; // Absent
                                 let emoji = '🪑'; // Emoji pour absent
                                 
-                                if (status === 'bureau' || status === 'présent') {
+                                if (status === 'true') {
                                     colorClasses = 'bg-emerald-400 text-emerald-900 border-2 border-emerald-500'; // Présent
                                     emoji = '🧑‍💻'; // Emoji pour présent
                                 }
@@ -357,10 +360,13 @@
             }
             loaderContainer.style.display = 'none';
             seatingPlan.style.display = 'grid';
+            
+            // Ajout du copyright
+            document.getElementById('copyright-year').textContent = new Date().getFullYear();
+
             setInterval(() => { location.reload(); }, 3600000);
         });
     </script>
 </body>
 </html>
-
 
