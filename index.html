@@ -44,14 +44,13 @@
 </head>
 <body class="p-4 sm:p-6 lg:p-8">
 
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-screen-xl mx-auto">
         <!-- En-tête de l'application -->
         <header class="text-center mb-8">
             <h1 class="text-3xl sm:text-4xl font-bold text-slate-800">Plan de Présence au Bureau de la ligne Logistique</h1>
             <p class="mt-2 text-lg text-slate-600">Sélectionnez une date pour voir qui est présent.</p>
-            <p class="text-sm text-slate-500 mt-2">Note : Les modifications apportées au Google Sheet peuvent prendre jusqu'à 5 minutes pour apparaître.</p>
-            <!-- <p id="last-refresh-time" class="text-sm text-slate-500 mt-1"></p> -->
-            <!-- <p id="g1-update-date" class="text-sm text-slate-500 mt-1"></p> -->
+            <!-- <p class="text-sm text-slate-500 mt-2">Note : Les modifications apportées au Google Sheet peuvent prendre jusqu'à 5 minutes pour apparaître.</p> -->
+            <p class="text-sm text-slate-500 mt-1">La synchronisation des données se fait tous les jours à 5h.</p>
             
         </header>
 
@@ -89,10 +88,19 @@
             </div>
         </div>
 
-        <main id="seating-plan" class="grid gap-2 sm:gap-3">
-            <div id="loader-container" class="col-span-full text-center p-8">
-                <div id="loader"></div>
-                <p class="text-slate-600">Chargement des données...</p>
+        <!-- MODIFIÉ : Nouvelle structure principale avec grille pour le plan et colonne latérale -->
+        <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div id="seating-plan" class="lg:col-span-3 grid gap-2 sm:gap-3">
+                <div id="loader-container" class="col-span-full text-center p-8">
+                    <div id="loader"></div>
+                    <p class="text-slate-600">Chargement des données...</p>
+                </div>
+            </div>
+            <div id="no-desk-area" class="lg:col-span-1 bg-white p-4 rounded-lg shadow-md">
+                <h2 class="text-xl font-bold text-slate-700 mb-4 text-center border-b pb-3">SBF</h2>
+                <div id="no-desk-list" class="space-y-3">
+                    <!-- La liste des personnes sans bureau sera générée ici -->
+                </div>
             </div>
         </main>
     </div>
@@ -102,27 +110,11 @@
         <p class="text-sm text-slate-500">&copy; <span id="copyright-year"></span> Ligne Logistique. Tous droits réservés.</p>
     </footer>
 
-    <!-- Structure de la popup (modal) - Désactivée
-    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
-        <div id="modal-content" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-lg font-bold text-slate-800" id="modal-title">Modifier la présence</h3>
-            <p class="mt-2 text-sm text-slate-600" id="modal-text"></p>
-            <p class="mt-4 text-xs text-slate-500">Pour des raisons de sécurité, l'écriture directe dans le fichier n'est pas possible depuis cette page. Cliquez sur le bouton pour ouvrir Google Sheets.</p>
-            <div class="mt-6 flex justify-end gap-4">
-                <button id="modal-close-button" class="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200">Annuler</button>
-                <a id="modal-edit-link" href="#" target="_blank" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Ouvrir Google Sheets</a>
-            </div>
-        </div>
-    </div>
-    -->
-
     <script>
         // --- CONFIGURATION ---
         const googleSheetCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSQIQlc7LfYaZdaB9FWT2I5Sq4cqGSpIoc77ola369bELlsLb1ziEFuKSAPOjJPyLkk8UQojXrUG4fH/pub?gid=1264042606&single=true&output=csv';
-        const googleSheetEditUrl = 'https://docs.google.com/spreadsheets/d/1frF7xYxU_f4jusfg0NeJE81o74m20f-QwypUGXd6NHk/edit';
-
+        
         // --- PLAN DU BUREAU ---
-        // MODIFIÉ : Ajout d'un marqueur 'corridor' pour les lignes de séparation
         const officeGrid = [
             ['A1', 'A2', 'A3'], ['B1', 'B2', 'B3'],
             ['corridor'],
@@ -137,54 +129,22 @@
             ['K1', 'K2', 'K3'], ['L1', 'L2', 'L3']
         ];
 
-        let employeeData = [];
-        let g1UpdateDate = '';
+        // MODIFIÉ : Listes séparées pour les employés avec et sans bureau
+        let employeesWithDesk = [];
+        let employeesWithoutDesk = [];
 
         // --- ÉLÉMENTS DU DOM ---
         const dateFilter = document.getElementById('date-filter');
         const seatingPlan = document.getElementById('seating-plan');
         const loaderContainer = document.getElementById('loader-container');
         const refreshButton = document.getElementById('refresh-button');
-        // const lastRefreshTimeElement = document.getElementById('last-refresh-time'); // Masqué
-        // const g1UpdateDateElement = document.getElementById('g1-update-date'); // Masqué
         const prevDayButton = document.getElementById('prev-day-button');
         const nextDayButton = document.getElementById('next-day-button');
+        const noDeskList = document.getElementById('no-desk-list');
         const originalRefreshButtonContent = refreshButton.innerHTML;
 
-        /* Code de la popup désactivé
-        const modal = document.getElementById('edit-modal');
-        const modalContent = document.getElementById('modal-content');
-        const modalText = document.getElementById('modal-text');
-        const modalEditLink = document.getElementById('modal-edit-link');
-        const modalCloseButton = document.getElementById('modal-close-button');
-        */
-
-        // --- FONCTIONS ---
-        /*
-        function updateLastRefreshDisplay() {
-            const now = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-            if (lastRefreshTimeElement) lastRefreshTimeElement.textContent = `Dernière actualisation : ${now.toLocaleDateString('fr-FR', options)}`;
-        }
         
-        function updateG1DateDisplay() {
-            if (!g1UpdateDate) {
-                if(g1UpdateDateElement) g1UpdateDateElement.textContent = '';
-                return;
-            }
-            const parts = g1UpdateDate.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{1,2}))?/);
-            let formattedDate = g1UpdateDate;
-            if (parts) {
-                const [, day, month, year, hour, minute] = parts;
-                const dateObj = new Date(year, month - 1, day, hour || 0, minute || 0);
-                if (!isNaN(dateObj.getTime())) {
-                    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: hour ? '2-digit' : undefined, minute: minute ? '2-digit' : undefined };
-                    formattedDate = dateObj.toLocaleDateString('fr-FR', options);
-                }
-            }
-            if (g1UpdateDateElement) g1UpdateDateElement.textContent = `Date de traitement MAJ : ${formattedDate}`;
-        }
-        */
+        // --- FONCTIONS ---
         
         async function fetchAndProcessData() {
             try {
@@ -194,31 +154,37 @@
                 const csvText = await response.text();
                 const rows = csvText.split('\n').map(row => row.trim().split(','));
 
-                g1UpdateDate = rows[0]?.[6]?.trim() || '';
-
                 const employeeMap = new Map();
                 rows.slice(1).forEach(row => {
                     const name = row[0]?.trim();
+                    if (!name) return; // Ignore les lignes sans nom
+
                     const seat = row[1]?.trim();
-                    if (!name || !seat) return;
+                    const date = row[2]?.trim();
+                    const status = row[4]?.trim().toLowerCase();
 
                     if (!employeeMap.has(name)) {
-                        employeeMap.set(name, { id: employeeMap.size + 1, name, seat, presences: {} });
+                        employeeMap.set(name, { id: employeeMap.size + 1, name, seat: seat || null, presences: {} });
                     }
-                    employeeMap.get(name).seat = seat;
+                    
+                    const employeeEntry = employeeMap.get(name);
+                    if (seat && !employeeEntry.seat) {
+                        employeeEntry.seat = seat;
+                    }
 
-                    const date = row[2]?.trim();
-                    // CORRIGÉ : On suppose que la colonne "Est present ?" est la 5ème colonne (index 4)
-                    const status = row[4]?.trim().toLowerCase();
                     if (date && status) {
                         const parts = date.split('/');
                         if (parts.length === 3) {
                             const formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                            employeeMap.get(name).presences[formattedDate] = status;
+                            employeeEntry.presences[formattedDate] = status;
                         }
                     }
                 });
-                employeeData = Array.from(employeeMap.values());
+                
+                const allEmployees = Array.from(employeeMap.values());
+                employeesWithDesk = allEmployees.filter(e => e.seat);
+                employeesWithoutDesk = allEmployees.filter(e => !e.seat);
+
                 return true;
             } catch (error) {
                 console.error("Erreur de chargement :", error);
@@ -227,93 +193,81 @@
             }
         }
 
-        // MODIFIÉ : La fonction est réécrite pour gérer les couloirs
         function updatePlan(selectedDate) {
             seatingPlan.innerHTML = '';
-            // Détermine le nombre maximum de colonnes à partir des rangées de bureaux uniquement
-            const maxColumns = officeGrid.reduce((max, row) => {
-                return (row.length > 1) ? Math.max(max, row.length) : max;
-            }, 0);
+            const maxColumns = officeGrid.reduce((max, row) => (Array.isArray(row) && row.length > 1) ? Math.max(max, row.length) : max, 0);
 
             if (maxColumns === 0) return;
             seatingPlan.style.gridTemplateColumns = `repeat(${maxColumns}, minmax(0, 1fr))`;
 
             officeGrid.forEach(row => {
-                // Vérifie si la rangée actuelle est un marqueur de couloir
-                if (row.length === 1 && row[0] === 'corridor') {
+                if (Array.isArray(row) && row.length === 1 && row[0] === 'corridor') {
                     const corridorElement = document.createElement('div');
-                    // Fait en sorte que l'élément s'étende sur toutes les colonnes de la grille
-                    corridorElement.style.gridColumn = '1 / -1';
-                    // Style de la ligne de couloir
+                    corridorElement.style.gridColumn = `1 / ${maxColumns + 1}`;
                     corridorElement.className = 'h-3 bg-slate-200 rounded-full my-1';
                     seatingPlan.appendChild(corridorElement);
-                } else {
-                    // C'est une rangée de bureaux normale
+                } else if (Array.isArray(row)) {
                     row.forEach(seatId => {
-                        if (seatId === null) {
-                            const spacer = document.createElement('div');
-                            spacer.style.visibility = 'hidden';
-                            seatingPlan.appendChild(spacer);
+                        const employee = employeesWithDesk.find(e => e.seat === seatId);
+                        const deskElement = document.createElement('div');
+                        deskElement.classList.add('desk', 'p-2', 'rounded-lg', 'shadow-md');
+
+                        if (employee) {
+                            const status = employee.presences[selectedDate];
+                            const isPresent = status === 'true';
+                            const colorClasses = isPresent ? 'bg-emerald-400 text-emerald-900 border-2 border-emerald-500' : 'bg-slate-300 text-slate-600 border-2 border-slate-400';
+                            const emoji = isPresent ? '🧑‍💻' : '🪑';
+                            
+                            deskElement.classList.add(...colorClasses.split(' '));
+                            deskElement.innerHTML = `<span class="font-bold text-base mt-1">${emoji} ${employee.name}</span>`;
                         } else {
-                            const employee = employeeData.find(e => e.seat === seatId);
-                            const deskElement = document.createElement('div');
-                            deskElement.classList.add('desk', 'p-2', 'rounded-lg', 'shadow-md');
-
-                            if (employee) {
-                                // CORRIGÉ : On récupère le statut pour la date sélectionnée
-                                const status = employee.presences[selectedDate];
-                                let colorClasses = 'bg-slate-300 text-slate-600 border-2 border-slate-400'; // Absent
-                                let emoji = '🪑'; // Emoji pour absent
-                                
-                                if (status === 'true') {
-                                    colorClasses = 'bg-emerald-400 text-emerald-900 border-2 border-emerald-500'; // Présent
-                                    emoji = '🧑‍💻'; // Emoji pour présent
-                                }
-                                
-                                deskElement.classList.add(...colorClasses.split(' '));
-                                deskElement.innerHTML = `<span class="font-bold text-base mt-1">${emoji} ${employee.name}</span>`;
-                                
-                            } else {
-                                deskElement.classList.add('bg-white', 'text-slate-400', 'border-2', 'border-dashed', 'border-slate-300');
-                                deskElement.innerHTML = `<span class="font-medium">${seatId}</span><span class="text-sm mt-1">Libre</span>`;
-                            }
-                            seatingPlan.appendChild(deskElement);
+                            deskElement.classList.add('bg-white', 'text-slate-400', 'border-2', 'border-dashed', 'border-slate-300');
+                            deskElement.innerHTML = `<span class="font-medium">${seatId}</span><span class="text-sm mt-1">Libre</span>`;
                         }
+                        seatingPlan.appendChild(deskElement);
                     });
-
-                    // Cette partie est importante pour garder la grille alignée si certaines rangées sont plus courtes
                     for (let i = row.length; i < maxColumns; i++) {
-                        const spacer = document.createElement('div');
-                        spacer.style.visibility = 'hidden';
-                        seatingPlan.appendChild(spacer);
+                        seatingPlan.appendChild(document.createElement('div'));
                     }
                 }
             });
         }
-        
-        /* Fonction de la popup désactivée
-        function openEditModal(employee, date) {
-            const dateObj = new Date(date + 'T12:00:00');
-            const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            modalText.textContent = `Modifier le statut de ${employee.name} pour le ${formattedDate}.`;
-            modalEditLink.href = googleSheetEditUrl;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+
+        // MODIFIÉ : Nouvelle fonction pour mettre à jour la liste des personnes sans bureau
+        function updateNoDeskList(selectedDate) {
+            noDeskList.innerHTML = '';
+            if (employeesWithoutDesk.length === 0) {
+                noDeskList.innerHTML = `<p class="text-sm text-slate-500 text-center italic">Aucune personne sans bureau fixe.</p>`;
+                return;
+            }
+
+            employeesWithoutDesk.forEach(employee => {
+                const status = employee.presences[selectedDate];
+                const isPresent = status === 'true';
+                const bgColor = isPresent ? 'bg-emerald-100' : 'bg-slate-100';
+                const textColor = isPresent ? 'text-emerald-900' : 'text-slate-700';
+                const emoji = isPresent ? '🧑‍💻' : '🪑';
+
+                const personElement = document.createElement('div');
+                personElement.className = `flex items-center p-3 rounded-lg shadow-sm ${bgColor} ${textColor} transition-colors duration-300`;
+                personElement.innerHTML = `
+                    <span class="text-xl mr-4">${emoji}</span>
+                    <span class="font-medium">${employee.name}</span>
+                `;
+                noDeskList.appendChild(personElement);
+            });
         }
 
-        function closeModal() {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+        function updateAllViews(date) {
+            updatePlan(date);
+            updateNoDeskList(date);
         }
-        */
 
         async function handleRefresh() {
             refreshButton.disabled = true;
             refreshButton.innerHTML = `<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Chargement...`;
             if (await fetchAndProcessData()) {
-                updatePlan(dateFilter.value);
-                // updateLastRefreshDisplay(); // Masqué
-                // updateG1DateDisplay(); // Masqué
+                updateAllViews(dateFilter.value);
             }
             refreshButton.disabled = false;
             refreshButton.innerHTML = `Actualisé ✓`;
@@ -330,7 +284,7 @@
             const newDateString = currentDate.toISOString().split('T')[0];
             dateFilter.value = newDateString;
             localStorage.setItem('selectedDate', newDateString); 
-            updatePlan(newDateString);
+            updateAllViews(newDateString);
         }
 
         // --- ÉVÉNEMENTS ---
@@ -338,33 +292,23 @@
         nextDayButton.addEventListener('click', () => changeDate(1));
         refreshButton.addEventListener('click', handleRefresh);
         dateFilter.addEventListener('change', (event) => {
-            updatePlan(event.target.value);
+            updateAllViews(event.target.value);
             localStorage.setItem('selectedDate', event.target.value); 
         });
-        
-        /* Événements de la popup désactivés
-        modalCloseButton.addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-        */
 
         document.addEventListener('DOMContentLoaded', async () => {
-            loaderContainer.style.display = 'block';
-            seatingPlan.style.display = 'none';
+            seatingPlan.innerHTML = ''; // Clear initial content
+            seatingPlan.appendChild(loaderContainer);
+            
             if (await fetchAndProcessData()) {
                 const savedDate = localStorage.getItem('selectedDate');
                 const initialDate = savedDate || new Date().toISOString().split('T')[0];
                 dateFilter.value = initialDate;
-                updatePlan(initialDate);
-                // updateLastRefreshDisplay(); // Masqué
-                // updateG1DateDisplay(); // Masqué
+                updateAllViews(initialDate);
             }
-            loaderContainer.style.display = 'none';
-            seatingPlan.style.display = 'grid';
+            loaderContainer.remove();
             
-            // Ajout du copyright
             document.getElementById('copyright-year').textContent = new Date().getFullYear();
-
-            setInterval(() => { location.reload(); }, 3600000);
         });
     </script>
 </body>
